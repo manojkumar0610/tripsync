@@ -68,9 +68,9 @@ Open `.env.local` and fill in:
 
 ```env
 # ─── Supabase ───────────────────────────────────────────────────────────────
-NEXT_PUBLIC_SUPABASE_URL=https://xxxxxxxxxxxx.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+NEXT_PUBLIC_SUPABASE_URL=https://gzdhunxdrnpumvojsbed.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd6ZGh1bnhkcm5wdW12b2pzYmVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY3NjMxOTUsImV4cCI6MjA5MjMzOTE5NX0.6EwUgcbo8ynEaG3CvzFYfNYuQI4ty_auuTatGUdLGyg
+SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd6ZGh1bnhkcm5wdW12b2pzYmVkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3Njc2MzE5NSwiZXhwIjoyMDkyMzM5MTk1fQ.JdY2VDHOu0IYrtY5bxf3TUn7-NUTa3uv1vXhD5f9bek
 
 # ─── OpenAI ─────────────────────────────────────────────────────────────────
 OPENAI_API_KEY=sk-proj-...
