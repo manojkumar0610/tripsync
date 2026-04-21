@@ -1,0 +1,82 @@
+import { notFound, redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
+import { TripDetailClient } from "@/components/trips/trip-detail-client";
+
+interface PageProps {
+  params: Promise<{ id: string }>;
+}
+
+export default async function TripDetailPage({ params }: PageProps) {
+  const { id } = await params;
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect("/auth/login");
+
+  // Fetch trip
+  const { data: trip } = await supabase
+    .from("trips")
+    .select("*")
+    .eq("id", id)
+    .single();
+
+  if (!trip) notFound();
+
+  // Check membership
+  const { data: membership } = await supabase
+    .from("trip_members")
+    .select("role")
+    .eq("trip_id", id)
+    .eq("user_id", user.id)
+    .single();
+
+  if (!membership) {
+    // Try to let them join via URL
+    redirect(`/join?code=${trip.invite_code}`);
+  }
+
+  // Fetch all members with user data
+  const { data: members } = await supabase
+    .from("trip_members")
+    .select("*, user:users(*)")
+    .eq("trip_id", id);
+
+  // Fetch expenses with splits and payer
+  const { data: expenses } = await supabase
+    .from("expenses")
+    .select("*, payer:users!expenses_paid_by_fkey(*), splits:expense_splits(*, user:users(*))")
+    .eq("trip_id", id)
+    .order("created_at", { ascending: false });
+
+  // Fetch votes with responses
+  const { data: votes } = await supabase
+    .from("votes")
+    .select("*, responses:vote_responses(*, user:users(*))")
+    .eq("trip_id", id)
+    .order("created_at", { ascending: false });
+
+  // Fetch itineraries
+  const { data: itineraries } = await supabase
+    .from("itineraries")
+    .select("*")
+    .eq("trip_id", id)
+    .order("created_at", { ascending: false });
+
+  // Fetch user profile
+  const { data: userProfile } = await supabase
+    .from("users")
+    .select("*")
+    .eq("id", user.id)
+    .single();
+
+  return (
+    <TripDetailClient
+      trip={trip}
+      members={members ?? []}
+      expenses={expenses ?? []}
+      votes={votes ?? []}
+      itineraries={itineraries ?? []}
+      currentUser={userProfile}
+      userRole={membership.role}
+    />
+  );
+}
