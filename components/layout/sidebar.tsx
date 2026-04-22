@@ -3,49 +3,28 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
-  LayoutDashboard,
-  Map,
-  PlusCircle,
-  Settings,
-  LogOut,
-  Plane,
-  Bell,
-  ChevronRight,
-  Sparkles,
-  Users,
+  LayoutDashboard, Map, PlusCircle, Settings,
+  LogOut, Plane, Bell, Sparkles, Users,
+  ChevronRight, Gift, TrendingUp, Crown
 } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { getInitials } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 
-interface NavItem {
-  label: string;
-  href: string;
-  icon: React.ElementType;
-  badge?: string;
+interface SidebarProps {
+  user: { id: string; email: string; full_name: string | null; avatar_url: string | null } | null;
+  notificationCount?: number;
 }
 
-const navItems: NavItem[] = [
+const NAV = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { label: "My Trips", href: "/dashboard/trips", icon: Map },
   { label: "Create Trip", href: "/dashboard/create", icon: PlusCircle },
-  { label: "Referrals 🎁", href: "/dashboard/referral", icon: Users },
+  { label: "Referrals", href: "/dashboard/referral", icon: Gift },
+  { label: "Upgrade", href: "/dashboard/upgrade", icon: Crown },
   { label: "Settings", href: "/dashboard/settings", icon: Settings },
 ];
-
-interface SidebarProps {
-  user: {
-    id: string;
-    email: string;
-    full_name: string | null;
-    avatar_url: string | null;
-  } | null;
-  notificationCount?: number;
-}
 
 export function Sidebar({ user, notificationCount = 0 }: SidebarProps) {
   const pathname = usePathname();
@@ -54,85 +33,107 @@ export function Sidebar({ user, notificationCount = 0 }: SidebarProps) {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    toast.success("Logged out successfully");
+    toast.success("Signed out");
     router.push("/");
     router.refresh();
   };
 
+  const isActive = (href: string) =>
+    href === "/dashboard"
+      ? pathname === "/dashboard"
+      : pathname.startsWith(href);
+
   return (
-    <aside className="flex h-screen w-64 flex-col border-r bg-card/50 backdrop-blur-sm">
+    <aside className="flex h-screen w-[240px] flex-col bg-[#0d0d14] border-r border-white/[0.06]">
       {/* Logo */}
-      <div className="flex items-center gap-2.5 p-6 pb-4">
-        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-violet-600 shadow-lg">
-          <Plane className="h-4.5 w-4.5 text-white rotate-45" size={18} />
+      <div className="flex items-center gap-2.5 px-5 h-16 border-b border-white/[0.06] shrink-0">
+        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center shadow-lg shadow-blue-500/20 shrink-0">
+          <Plane className="w-4 h-4 text-white rotate-45" />
         </div>
-        <span className="font-syne text-xl font-bold tracking-tight">TripSync</span>
-        <Badge variant="info" className="ml-auto text-[10px] px-1.5 py-0.5">BETA</Badge>
+        <span className="text-base font-bold text-white tracking-tight">TripSync</span>
+        <div className="ml-auto">
+          <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-blue-500/10 text-blue-400 border border-blue-500/20">
+            BETA
+          </span>
+        </div>
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 space-y-1 px-3 py-2">
-        {navItems.map((item) => {
-          const Icon = item.icon;
-          const isActive = pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href));
+      <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
+        {NAV.map(({ label, href, icon: Icon }) => {
+          const active = isActive(href);
           return (
-            <Link key={item.href} href={item.href}>
+            <Link key={href} href={href}>
               <div className={cn(
-                "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-150",
-                isActive
-                  ? "bg-primary text-primary-foreground shadow-sm"
-                  : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 group",
+                active
+                  ? "bg-blue-500/10 text-blue-400"
+                  : "text-white/40 hover:text-white/80 hover:bg-white/[0.04]"
               )}>
-                <Icon size={18} />
-                <span>{item.label}</span>
-                {isActive && <ChevronRight size={14} className="ml-auto opacity-60" />}
+                <Icon className={cn("w-4 h-4 shrink-0", active ? "text-blue-400" : "text-white/30 group-hover:text-white/60")} />
+                <span>{label}</span>
+                {active && <ChevronRight className="w-3 h-3 ml-auto text-blue-400/60" />}
+                {label === "Upgrade" && !active && (
+                  <span className="ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                    PRO
+                  </span>
+                )}
               </div>
             </Link>
           );
         })}
 
-        {/* AI Itinerary CTA */}
-        <div className="mt-4 rounded-xl bg-gradient-to-br from-blue-50 to-violet-50 dark:from-blue-950/30 dark:to-violet-950/30 p-3 border border-blue-100 dark:border-blue-900/30">
-          <div className="flex items-center gap-2 mb-1.5">
-            <Sparkles size={14} className="text-blue-600" />
-            <span className="text-xs font-semibold text-blue-700 dark:text-blue-400">AI Itinerary</span>
+        {/* AI CTA */}
+        <div className="mt-4 mx-1 rounded-xl bg-gradient-to-br from-blue-600/10 to-violet-600/10 border border-blue-500/10 p-3.5">
+          <div className="flex items-center gap-2 mb-2">
+            <Sparkles className="w-3.5 h-3.5 text-blue-400" />
+            <span className="text-xs font-semibold text-blue-300">AI Itinerary</span>
           </div>
-          <p className="text-xs text-muted-foreground mb-2">Generate smart travel plans with AI</p>
+          <p className="text-[11px] text-white/35 mb-3 leading-relaxed">
+            Generate your perfect day-by-day travel plan instantly
+          </p>
           <Link href="/dashboard/trips">
-            <Button size="sm" variant="gradient" className="w-full h-7 text-xs">
-              Try Now
-            </Button>
+            <button className="w-full h-7 rounded-lg bg-gradient-to-r from-blue-600 to-violet-600 text-white text-xs font-semibold hover:opacity-90 transition-opacity">
+              Generate Now
+            </button>
           </Link>
         </div>
       </nav>
 
-      {/* User Profile */}
-      <div className="border-t p-3">
+      {/* User */}
+      <div className="px-3 pb-4 pt-2 border-t border-white/[0.06] space-y-1">
         {notificationCount > 0 && (
           <Link href="/dashboard/settings">
-            <div className="flex items-center gap-3 rounded-xl px-3 py-2 mb-1 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer">
-              <Bell size={18} />
+            <div className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-white/40 hover:text-white/70 hover:bg-white/[0.04] transition-all cursor-pointer">
+              <Bell className="w-4 h-4" />
               <span>Notifications</span>
-              <Badge className="ml-auto h-5 w-5 flex items-center justify-center p-0 text-[10px] bg-red-500">
-                {notificationCount}
-              </Badge>
+              <span className="ml-auto flex items-center justify-center w-5 h-5 rounded-full bg-red-500 text-white text-[10px] font-bold">
+                {notificationCount > 9 ? "9+" : notificationCount}
+              </span>
             </div>
           </Link>
         )}
-        <div className="flex items-center gap-3 rounded-xl px-3 py-2">
-          <Avatar className="h-8 w-8">
-            <AvatarImage src={user?.avatar_url ?? ""} />
-            <AvatarFallback className="text-xs">
-              {getInitials(user?.full_name ?? user?.email ?? "U")}
-            </AvatarFallback>
-          </Avatar>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium truncate">{user?.full_name ?? "Traveler"}</p>
-            <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
+
+        <div className="flex items-center gap-3 px-3 py-2 rounded-xl">
+          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center text-white text-xs font-bold shrink-0">
+            {user?.avatar_url ? (
+              <img src={user.avatar_url} alt="" className="w-full h-full rounded-full object-cover" />
+            ) : (
+              getInitials(user?.full_name ?? user?.email ?? "U")
+            )}
           </div>
-          <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive" onClick={handleLogout}>
-            <LogOut size={16} />
-          </Button>
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-semibold text-white/80 truncate">
+              {user?.full_name ?? "Traveler"}
+            </p>
+            <p className="text-[10px] text-white/30 truncate">{user?.email}</p>
+          </div>
+          <button
+            onClick={handleLogout}
+            className="w-7 h-7 rounded-lg flex items-center justify-center text-white/25 hover:text-red-400 hover:bg-red-500/10 transition-all"
+          >
+            <LogOut className="w-3.5 h-3.5" />
+          </button>
         </div>
       </div>
     </aside>
