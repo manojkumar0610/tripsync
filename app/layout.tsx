@@ -3,6 +3,7 @@ import "./globals.css";
 import { Toaster } from "sonner";
 import { ThemeProvider } from "@/components/layout/theme-provider";
 import { ReactQueryProvider } from "@/components/layout/react-query-provider";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 export const metadata: Metadata = {
   title: { default: "TripSync — AI-Powered Travel Planning", template: "%s | TripSync" },
@@ -46,6 +47,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             toastOptions={{ style: { borderRadius: "12px", fontFamily: "DM Sans, sans-serif" } }}
           />
         </ThemeProvider>
+        <SpeedInsights />
       </body>
     </html>
   );
