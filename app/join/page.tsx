@@ -3,17 +3,14 @@
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Plane, Users, MapPin, Loader2, ArrowRight } from "lucide-react";
+import { Plane, MapPin, Users, Calendar, ArrowRight, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { formatDate, getTripTypeEmoji } from "@/lib/utils";
 
-function JoinTripContent() {
+function JoinContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const supabase = createClient();
-
   const codeFromUrl = searchParams.get("code") ?? "";
   const [code, setCode] = useState(codeFromUrl);
   const [trip, setTrip] = useState<any>(null);
@@ -26,147 +23,95 @@ function JoinTripContent() {
   }, []);
 
   useEffect(() => {
-    if (codeFromUrl) lookupTrip(codeFromUrl);
+    if (codeFromUrl) lookup(codeFromUrl);
   }, [codeFromUrl]);
 
-  const lookupTrip = async (inviteCode: string) => {
-    if (!inviteCode.trim()) return;
+  const lookup = async (c: string) => {
+    if (c.length < 6) return;
     setLoading(true);
-    const { data, error } = await supabase
-      .from("trips")
-      .select("*, trip_members(count)")
-      .eq("invite_code", inviteCode.toUpperCase().trim())
-      .single();
-
-    if (error || !data) {
-      toast.error("Invalid invite code. Please check and try again.");
-      setTrip(null);
-    } else {
-      setTrip(data);
-    }
+    const { data } = await supabase.from("trips").select("*, trip_members(count)").eq("invite_code", c.toUpperCase().trim()).single();
+    if (data) setTrip(data); else toast.error("Invalid invite code");
     setLoading(false);
   };
 
   const handleJoin = async () => {
-    if (!user) {
-      router.push(`/auth/login?redirectTo=/join?code=${code}`);
-      return;
-    }
-
+    if (!user) { router.push(`/auth/login?redirectTo=/join?code=${code}`); return; }
     setJoining(true);
     try {
-      // Check if already a member
-      const { data: existing } = await supabase
-        .from("trip_members")
-        .select("id")
-        .eq("trip_id", trip.id)
-        .eq("user_id", user.id)
-        .single();
-
-      if (existing) {
-        toast.info("You're already a member of this trip!");
-        router.push(`/trip/${trip.id}`);
-        return;
-      }
-
-      const { error } = await supabase.from("trip_members").insert({
-        trip_id: trip.id,
-        user_id: user.id,
-        role: "member",
-      });
-
+      const { data: existing } = await supabase.from("trip_members").select("id").eq("trip_id", trip.id).eq("user_id", user.id).single();
+      if (existing) { toast.info("Already a member!"); router.push(`/trip/${trip.id}`); return; }
+      const { error } = await supabase.from("trip_members").insert({ trip_id: trip.id, user_id: user.id, role: "member" });
       if (error) throw error;
-
-      toast.success("🎉 You've joined the trip!");
+      toast.success("🎉 Joined the trip!");
       router.push(`/trip/${trip.id}`);
     } catch (err: any) {
-      toast.error(err.message ?? "Failed to join trip");
-    } finally {
-      setJoining(false);
-    }
+      toast.error(err.message ?? "Failed to join");
+    } finally { setJoining(false); }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-violet-950 flex items-center justify-center p-4">
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/3 left-1/3 h-96 w-96 rounded-full bg-blue-500/10 blur-3xl" />
+    <div className="min-h-screen bg-[#080810] flex items-center justify-center p-4">
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[500px] h-[500px] rounded-full bg-blue-600/8 blur-3xl" />
       </div>
 
-      <div className="relative w-full max-w-md">
+      <div className="relative w-full max-w-sm">
         <div className="text-center mb-8">
-          <div className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 to-violet-600 shadow-2xl mb-4">
-            <Plane className="text-white rotate-45" size={24} />
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center mx-auto mb-4 shadow-2xl shadow-blue-500/25">
+            <Plane className="w-5 h-5 text-white rotate-45" />
           </div>
-          <h1 className="font-syne text-3xl font-bold text-white">Join a Trip</h1>
-          <p className="text-blue-200/70 mt-1 text-sm">Enter your invite code below</p>
+          <h1 className="text-2xl font-bold text-white mb-1">Join a Trip</h1>
+          <p className="text-white/35 text-sm">Enter your 6-letter invite code</p>
         </div>
 
-        <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl p-8 shadow-2xl space-y-6">
-          {/* Code input */}
-          <div className="space-y-3">
-            <div className="flex gap-2">
-              <Input
-                placeholder="Enter 6-letter code"
-                value={code}
-                onChange={(e) => setCode(e.target.value.toUpperCase())}
-                className="h-14 text-center text-2xl font-mono font-bold tracking-[0.3em] bg-white/10 border-white/10 text-white placeholder:text-white/20 focus-visible:ring-blue-400 uppercase"
-                maxLength={6}
-              />
-              <Button
-                onClick={() => lookupTrip(code)}
-                disabled={loading || code.length < 6}
-                className="h-14 w-14 bg-blue-600 hover:bg-blue-700 shrink-0"
-                size="icon"
-              >
-                {loading ? <Loader2 size={18} className="animate-spin" /> : <ArrowRight size={18} />}
-              </Button>
-            </div>
+        <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-6 space-y-5">
+          <div className="flex gap-2">
+            <input
+              value={code}
+              onChange={e => setCode(e.target.value.toUpperCase())}
+              placeholder="ABC123"
+              maxLength={6}
+              className="flex-1 h-14 bg-white/[0.04] border border-white/[0.08] rounded-xl text-center text-2xl font-bold tracking-[0.3em] text-white placeholder:text-white/15 outline-none focus:border-blue-500/50 focus:shadow-[0_0_0_3px_rgba(59,130,246,0.1)] transition-all uppercase"
+            />
+            <button
+              onClick={() => lookup(code)}
+              disabled={loading || code.length < 6}
+              className="w-14 h-14 rounded-xl bg-blue-600 hover:bg-blue-500 text-white flex items-center justify-center shrink-0 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <ArrowRight className="w-5 h-5" />}
+            </button>
           </div>
 
-          {/* Trip preview */}
           {trip && (
-            <div className="rounded-xl border border-white/10 bg-white/5 p-5 space-y-4">
-              <div className="flex items-center gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/10 text-2xl">
+            <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] overflow-hidden">
+              <div className="bg-gradient-to-br from-blue-600/20 to-violet-600/20 p-4 flex items-center gap-3">
+                <div className="w-11 h-11 rounded-xl bg-white/10 flex items-center justify-center text-2xl shrink-0">
                   {getTripTypeEmoji(trip.trip_type)}
                 </div>
                 <div>
-                  <p className="font-syne font-bold text-white">{trip.title}</p>
-                  <p className="text-sm text-blue-200/70 flex items-center gap-1">
-                    <MapPin size={12} /> {trip.destination}
-                  </p>
+                  <p className="font-semibold text-white">{trip.title}</p>
+                  <p className="text-xs text-white/50 flex items-center gap-1"><MapPin className="w-3 h-3" />{trip.destination}</p>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div className="rounded-lg bg-white/5 p-2.5">
-                  <p className="text-blue-200/50 text-xs mb-0.5">Dates</p>
-                  <p className="text-white font-medium text-xs">
-                    {formatDate(trip.start_date)} — {formatDate(trip.end_date)}
-                  </p>
+              <div className="grid grid-cols-2 gap-px bg-white/[0.04] p-px">
+                <div className="bg-[#0d0d14] px-4 py-3">
+                  <p className="text-[10px] text-white/30 mb-0.5">Dates</p>
+                  <p className="text-xs font-medium text-white/70">{formatDate(trip.start_date)}</p>
                 </div>
-                <div className="rounded-lg bg-white/5 p-2.5">
-                  <p className="text-blue-200/50 text-xs mb-0.5">Members</p>
-                  <p className="text-white font-medium flex items-center gap-1">
-                    <Users size={12} />
-                    {trip.trip_members?.[0]?.count ?? 1} people
-                  </p>
+                <div className="bg-[#0d0d14] px-4 py-3">
+                  <p className="text-[10px] text-white/30 mb-0.5">Members</p>
+                  <p className="text-xs font-medium text-white/70 flex items-center gap-1"><Users className="w-3 h-3" />{trip.trip_members?.[0]?.count ?? 1}</p>
                 </div>
               </div>
-
-              <Button
-                onClick={handleJoin}
-                disabled={joining}
-                className="w-full h-12 bg-gradient-to-r from-blue-500 to-violet-600 hover:opacity-90 text-white font-medium gap-2 border-0"
-              >
-                {joining ? (
-                  <Loader2 size={16} className="animate-spin" />
-                ) : (
-                  <>
-                    {user ? "Join Trip 🎉" : "Sign In to Join"}
-                    <ArrowRight size={16} />
-                  </>
-                )}
-              </Button>
+              <div className="p-4">
+                <button
+                  onClick={handleJoin}
+                  disabled={joining}
+                  className="btn-glow w-full h-11 rounded-xl text-white text-sm font-semibold flex items-center justify-center gap-2"
+                >
+                  {joining ? <Loader2 className="w-4 h-4 animate-spin" /> : <>{user ? "Join Trip 🎉" : "Sign In to Join"} <ArrowRight className="w-4 h-4" /></>}
+                </button>
+              </div>
             </div>
           )}
         </div>
@@ -176,9 +121,5 @@ function JoinTripContent() {
 }
 
 export default function JoinPage() {
-  return (
-    <Suspense>
-      <JoinTripContent />
-    </Suspense>
-  );
+  return <Suspense fallback={<div className="min-h-screen bg-[#080810] flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-blue-500" /></div>}><JoinContent /></Suspense>;
 }
