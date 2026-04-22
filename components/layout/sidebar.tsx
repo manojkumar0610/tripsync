@@ -2,20 +2,10 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import {
-  LayoutDashboard, Map, PlusCircle, Settings,
-  LogOut, Plane, Bell, Sparkles, Users,
-  ChevronRight, Gift, TrendingUp, Crown
-} from "lucide-react";
+import { LayoutDashboard, Map, PlusCircle, Settings, LogOut, Plane, Sparkles, Gift, Crown, ChevronRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { getInitials } from "@/lib/utils";
-import { cn } from "@/lib/utils";
-
-interface SidebarProps {
-  user: { id: string; email: string; full_name: string | null; avatar_url: string | null } | null;
-  notificationCount?: number;
-}
 
 const NAV = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -25,6 +15,11 @@ const NAV = [
   { label: "Upgrade", href: "/dashboard/upgrade", icon: Crown },
   { label: "Settings", href: "/dashboard/settings", icon: Settings },
 ];
+
+interface SidebarProps {
+  user: { id: string; email: string; full_name: string | null; avatar_url: string | null } | null;
+  notificationCount?: number;
+}
 
 export function Sidebar({ user, notificationCount = 0 }: SidebarProps) {
   const pathname = usePathname();
@@ -39,100 +34,104 @@ export function Sidebar({ user, notificationCount = 0 }: SidebarProps) {
   };
 
   const isActive = (href: string) =>
-    href === "/dashboard"
-      ? pathname === "/dashboard"
-      : pathname.startsWith(href);
+    href === "/dashboard" ? pathname === "/dashboard" : pathname.startsWith(href);
 
   return (
-    <aside className="flex h-screen w-[240px] flex-col bg-[#0d0d14] border-r border-white/[0.06]">
+    <aside style={{
+      width: 240,
+      height: "100vh",
+      display: "flex",
+      flexDirection: "column",
+      background: "#0a0a14",
+      borderRight: "1px solid rgba(255,255,255,0.06)",
+      flexShrink: 0,
+    }}>
       {/* Logo */}
-      <div className="flex items-center gap-2.5 px-5 h-16 border-b border-white/[0.06] shrink-0">
-        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center shadow-lg shadow-blue-500/20 shrink-0">
-          <Plane className="w-4 h-4 text-white rotate-45" />
+      <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "0 20px", height: 64, borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+        <div style={{
+          width: 32, height: 32, borderRadius: 10,
+          background: "linear-gradient(135deg, #3b82f6, #8b5cf6)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          boxShadow: "0 4px 12px rgba(59,130,246,0.25)",
+          flexShrink: 0,
+        }}>
+          <Plane size={15} color="white" style={{ transform: "rotate(45deg)" }} />
         </div>
-        <span className="text-base font-bold text-white tracking-tight">TripSync</span>
-        <div className="ml-auto">
-          <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-blue-500/10 text-blue-400 border border-blue-500/20">
-            BETA
-          </span>
-        </div>
+        <span style={{ fontSize: 16, fontWeight: 700, color: "rgba(255,255,255,0.9)", letterSpacing: "-0.02em" }}>TripSync</span>
+        <span style={{ marginLeft: "auto", fontSize: 10, fontWeight: 700, padding: "2px 6px", borderRadius: 6, background: "rgba(59,130,246,0.1)", color: "#60a5fa", border: "1px solid rgba(59,130,246,0.2)" }}>
+          BETA
+        </span>
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
+      <nav style={{ flex: 1, padding: "12px 12px", display: "flex", flexDirection: "column", gap: 2, overflowY: "auto" }}>
         {NAV.map(({ label, href, icon: Icon }) => {
           const active = isActive(href);
           return (
-            <Link key={href} href={href}>
-              <div className={cn(
-                "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 group",
-                active
-                  ? "bg-blue-500/10 text-blue-400"
-                  : "text-white/40 hover:text-white/80 hover:bg-white/[0.04]"
-              )}>
-                <Icon className={cn("w-4 h-4 shrink-0", active ? "text-blue-400" : "text-white/30 group-hover:text-white/60")} />
+            <Link key={href} href={href} style={{ textDecoration: "none" }}>
+              <div className={`nav-item${active ? " active" : ""}`}>
+                <Icon size={15} style={{ flexShrink: 0 }} />
                 <span>{label}</span>
-                {active && <ChevronRight className="w-3 h-3 ml-auto text-blue-400/60" />}
                 {label === "Upgrade" && !active && (
-                  <span className="ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                  <span style={{ marginLeft: "auto", fontSize: 10, fontWeight: 700, padding: "1px 6px", borderRadius: 6, background: "rgba(245,158,11,0.1)", color: "#fcd34d", border: "1px solid rgba(245,158,11,0.2)" }}>
                     PRO
                   </span>
                 )}
+                {active && <ChevronRight size={12} style={{ marginLeft: "auto", opacity: 0.4 }} />}
               </div>
             </Link>
           );
         })}
 
         {/* AI CTA */}
-        <div className="mt-4 mx-1 rounded-xl bg-gradient-to-br from-blue-600/10 to-violet-600/10 border border-blue-500/10 p-3.5">
-          <div className="flex items-center gap-2 mb-2">
-            <Sparkles className="w-3.5 h-3.5 text-blue-400" />
-            <span className="text-xs font-semibold text-blue-300">AI Itinerary</span>
+        <div style={{ marginTop: 12, padding: 14, borderRadius: 12, background: "rgba(59,130,246,0.06)", border: "1px solid rgba(59,130,246,0.1)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
+            <Sparkles size={13} color="#60a5fa" />
+            <span style={{ fontSize: 12, fontWeight: 600, color: "#93c5fd" }}>AI Itinerary</span>
           </div>
-          <p className="text-[11px] text-white/35 mb-3 leading-relaxed">
-            Generate your perfect day-by-day travel plan instantly
+          <p style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", marginBottom: 10, lineHeight: 1.5 }}>
+            Generate your perfect travel plan instantly
           </p>
-          <Link href="/dashboard/trips">
-            <button className="w-full h-7 rounded-lg bg-gradient-to-r from-blue-600 to-violet-600 text-white text-xs font-semibold hover:opacity-90 transition-opacity">
+          <Link href="/dashboard/trips" style={{ textDecoration: "none" }}>
+            <div style={{
+              height: 28, display: "flex", alignItems: "center", justifyContent: "center",
+              borderRadius: 8, background: "linear-gradient(135deg, #3b82f6, #8b5cf6)",
+              fontSize: 11, fontWeight: 600, color: "white", cursor: "pointer",
+            }}>
               Generate Now
-            </button>
+            </div>
           </Link>
         </div>
       </nav>
 
       {/* User */}
-      <div className="px-3 pb-4 pt-2 border-t border-white/[0.06] space-y-1">
-        {notificationCount > 0 && (
-          <Link href="/dashboard/settings">
-            <div className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-white/40 hover:text-white/70 hover:bg-white/[0.04] transition-all cursor-pointer">
-              <Bell className="w-4 h-4" />
-              <span>Notifications</span>
-              <span className="ml-auto flex items-center justify-center w-5 h-5 rounded-full bg-red-500 text-white text-[10px] font-bold">
-                {notificationCount > 9 ? "9+" : notificationCount}
-              </span>
-            </div>
-          </Link>
-        )}
-
-        <div className="flex items-center gap-3 px-3 py-2 rounded-xl">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center text-white text-xs font-bold shrink-0">
-            {user?.avatar_url ? (
-              <img src={user.avatar_url} alt="" className="w-full h-full rounded-full object-cover" />
-            ) : (
-              getInitials(user?.full_name ?? user?.email ?? "U")
-            )}
+      <div style={{ padding: "8px 12px 16px", borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", borderRadius: 10 }}>
+          <div style={{
+            width: 32, height: 32, borderRadius: 8,
+            background: "linear-gradient(135deg, #3b82f6, #8b5cf6)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: 12, fontWeight: 700, color: "white", flexShrink: 0, overflow: "hidden",
+          }}>
+            {user?.avatar_url
+              ? <img src={user.avatar_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              : getInitials(user?.full_name ?? user?.email ?? "U")}
           </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-xs font-semibold text-white/80 truncate">
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,0.8)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
               {user?.full_name ?? "Traveler"}
             </p>
-            <p className="text-[10px] text-white/30 truncate">{user?.email}</p>
+            <p style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              {user?.email}
+            </p>
           </div>
           <button
             onClick={handleLogout}
-            className="w-7 h-7 rounded-lg flex items-center justify-center text-white/25 hover:text-red-400 hover:bg-red-500/10 transition-all"
+            style={{ width: 28, height: 28, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", background: "transparent", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.25)", flexShrink: 0, transition: "all 0.15s" }}
+            onMouseEnter={e => { (e.target as HTMLElement).style.background = "rgba(244,63,94,0.1)"; (e.target as HTMLElement).style.color = "#f87171"; }}
+            onMouseLeave={e => { (e.target as HTMLElement).style.background = "transparent"; (e.target as HTMLElement).style.color = "rgba(255,255,255,0.25)"; }}
           >
-            <LogOut className="w-3.5 h-3.5" />
+            <LogOut size={14} />
           </button>
         </div>
       </div>

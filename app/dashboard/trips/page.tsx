@@ -2,18 +2,17 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { DashboardHeader } from "@/components/layout/dashboard-header";
-import { PlusCircle, Calendar, Users, DollarSign, Plane, ArrowRight, Map } from "lucide-react";
+import { PlusCircle, Calendar, Users, DollarSign, Plane, ArrowRight, Map, ChevronRight } from "lucide-react";
 import { formatCurrency, formatDate, getDaysUntilTrip, getTripTypeEmoji, getTripTypeLabel } from "@/lib/utils";
-import { cn } from "@/lib/utils";
 
 export default async function TripsPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/auth/login");
 
-  const { data: tripMembers } = await supabase.from("trip_members").select("trip_id, role").eq("user_id", user.id);
-  const tripIds = (tripMembers ?? []).map(m => m.trip_id);
-  const roleMap = Object.fromEntries((tripMembers ?? []).map(m => [m.trip_id, m.role]));
+  const { data: tripMembers } = await supabase.from("trip_members").select("trip_id,role").eq("user_id", user.id);
+  const tripIds = (tripMembers ?? []).map((m: any) => m.trip_id);
+  const roleMap = Object.fromEntries((tripMembers ?? []).map((m: any) => [m.trip_id, m.role]));
 
   let trips: any[] = [];
   if (tripIds.length > 0) {
@@ -26,60 +25,54 @@ export default async function TripsPage() {
   const upcoming = trips.filter(t => new Date(t.start_date) > now);
   const past = trips.filter(t => new Date(t.end_date) < now);
 
+  const typeGradients: Record<string, string> = {
+    friends: "linear-gradient(135deg, rgba(59,130,246,0.3), rgba(139,92,246,0.3))",
+    family: "linear-gradient(135deg, rgba(16,185,129,0.3), rgba(20,184,166,0.3))",
+    solo: "linear-gradient(135deg, rgba(245,158,11,0.3), rgba(234,88,12,0.3))",
+    bike_trip: "linear-gradient(135deg, rgba(244,63,94,0.3), rgba(239,68,68,0.3))",
+  };
+
   const TripCard = ({ trip }: { trip: any }) => {
     const daysUntil = getDaysUntilTrip(trip.start_date);
-    const isActiveTripNow = !!active.find((a: any) => a.id === trip.id);
+    const isActivenow = new Date(trip.start_date) <= now && new Date(trip.end_date) >= now;
     const isPast = new Date(trip.end_date) < now;
-    const memberCount = trip.trip_members?.[0]?.count ?? 1;
+    const count = trip.trip_members?.[0]?.count ?? 1;
     const role = roleMap[trip.id];
-    const colors: Record<string, string> = {
-      friends: "from-blue-500 to-violet-600",
-      family: "from-emerald-500 to-teal-600",
-      solo: "from-amber-500 to-orange-600",
-      bike_trip: "from-rose-500 to-red-600",
-    };
 
     return (
-      <Link href={`/trip/${trip.id}`}>
-        <div className="card-glow p-5 cursor-pointer group animate-fade-up">
-          <div className="flex items-start gap-4">
-            {/* Emoji icon */}
-            <div className={cn("w-12 h-12 rounded-xl bg-gradient-to-br flex items-center justify-center text-xl shrink-0", colors[trip.trip_type] ?? "from-blue-500 to-violet-600")}>
-              <span className="filter drop-shadow-sm">{getTripTypeEmoji(trip.trip_type)}</span>
+      <Link href={`/trip/${trip.id}`} style={{ textDecoration: "none" }}>
+        <div className="card-hover" style={{ padding: "16px 18px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+            <div style={{ width: 46, height: 46, borderRadius: 13, background: typeGradients[trip.trip_type] ?? typeGradients.friends, border: "1px solid rgba(255,255,255,0.1)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, flexShrink: 0 }}>
+              {getTripTypeEmoji(trip.trip_type)}
             </div>
-
-            <div className="flex-1 min-w-0">
-              <div className="flex items-start justify-between gap-3 mb-1">
-                <h3 className="font-semibold text-white/90 truncate">{trip.title}</h3>
-                <div className="flex items-center gap-1.5 shrink-0">
-                  {isActiveTripNow && (
-                    <span className="flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />Active
-                    </span>
-                  )}
-                  {isPast && <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-white/5 text-white/30 border border-white/10">Done</span>}
-                  {role === "owner" && <span className="text-[10px] font-medium px-2 py-0.5 rounded-full badge-blue">Owner</span>}
-                </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4, flexWrap: "wrap" }}>
+                <p style={{ fontSize: 14, fontWeight: 600, color: "rgba(255,255,255,0.88)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 180 }}>{trip.title}</p>
+                {isActivenow && (
+                  <span className="badge badge-green">
+                    <span style={{ width: 5, height: 5, borderRadius: "50%", background: "#34d399", animation: "pulse-dot 2s infinite" }} /> Active
+                  </span>
+                )}
+                {isPast && <span className="badge badge-muted">Completed</span>}
+                {role === "owner" && <span className="badge badge-blue">Owner</span>}
               </div>
-
-              <p className="text-xs text-white/40 flex items-center gap-1 mb-2">
-                <Map className="w-3 h-3" />{trip.destination}
+              <p style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", marginBottom: 6, display: "flex", alignItems: "center", gap: 4 }}>
+                <Map size={11} /> {trip.destination}
               </p>
-
-              <div className="flex flex-wrap items-center gap-3 text-[11px] text-white/25">
-                <span className="flex items-center gap-1"><Calendar className="w-3 h-3" />{formatDate(trip.start_date)} — {formatDate(trip.end_date)}</span>
-                <span className="flex items-center gap-1"><Users className="w-3 h-3" />{memberCount}</span>
-                {trip.budget > 0 && <span className="flex items-center gap-1"><DollarSign className="w-3 h-3" />{formatCurrency(trip.budget)}</span>}
+              <div style={{ display: "flex", gap: 12, fontSize: 11, color: "rgba(255,255,255,0.25)", flexWrap: "wrap" }}>
+                <span style={{ display: "flex", alignItems: "center", gap: 4 }}><Calendar size={10} />{formatDate(trip.start_date)} — {formatDate(trip.end_date)}</span>
+                <span style={{ display: "flex", alignItems: "center", gap: 4 }}><Users size={10} />{count}</span>
+                {trip.budget > 0 && <span style={{ display: "flex", alignItems: "center", gap: 4 }}><DollarSign size={10} />{formatCurrency(trip.budget)}</span>}
               </div>
             </div>
-
-            <div className="text-right shrink-0">
-              {!isPast && !isActiveTripNow && daysUntil >= 0 && (
-                <p className={cn("text-sm font-bold", daysUntil <= 7 ? "text-amber-400" : "text-blue-400")}>
+            <div style={{ textAlign: "right", flexShrink: 0 }}>
+              {!isPast && !isActivenow && daysUntil >= 0 && (
+                <p style={{ fontSize: 13, fontWeight: 700, color: daysUntil <= 7 ? "#fbbf24" : "#60a5fa" }}>
                   {daysUntil === 0 ? "Today!" : `${daysUntil}d`}
                 </p>
               )}
-              <ArrowRight className="w-4 h-4 text-white/15 mt-1 opacity-0 group-hover:opacity-100 transition-opacity ml-auto" />
+              <ChevronRight size={14} color="rgba(255,255,255,0.2)" style={{ marginTop: 4 }} />
             </div>
           </div>
         </div>
@@ -87,57 +80,52 @@ export default async function TripsPage() {
     );
   };
 
-  const Section = ({ title, trips, dot }: { title: string; trips: any[]; dot?: string }) => (
+  const Section = ({ title, trips, dot }: { title: string; trips: any[]; dot: string }) =>
     trips.length > 0 ? (
-      <section className="space-y-3">
-        <div className="flex items-center gap-2">
-          {dot && <span className={cn("w-2 h-2 rounded-full", dot)} />}
-          <h2 className="text-sm font-semibold text-white/50 uppercase tracking-wider">{title}</h2>
-          <span className="text-xs text-white/25 font-medium">({trips.length})</span>
+      <div style={{ marginBottom: 28 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+          <span style={{ width: 7, height: 7, borderRadius: "50%", background: dot, flexShrink: 0 }} />
+          <span className="section-label">{title}</span>
+          <span style={{ fontSize: 12, color: "rgba(255,255,255,0.2)", fontWeight: 600 }}>({trips.length})</span>
         </div>
-        {trips.map(t => <TripCard key={t.id} trip={t} />)}
-      </section>
-    ) : null
-  );
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {trips.map(t => <TripCard key={t.id} trip={t} />)}
+        </div>
+      </div>
+    ) : null;
 
   return (
-    <div className="animate-fade-in">
-      <DashboardHeader title="My Trips" subtitle={`${trips.length} trips total`} />
-      <div className="page-container py-8 space-y-8">
-        <div className="flex items-center justify-between">
-          <div className="flex gap-4 text-xs text-white/30">
-            <span><span className="text-white/60 font-semibold">{upcoming.length}</span> upcoming</span>
-            <span><span className="text-white/60 font-semibold">{active.length}</span> active</span>
-            <span><span className="text-white/60 font-semibold">{past.length}</span> past</span>
+    <>
+      <DashboardHeader title="My Trips" subtitle={`${trips.length} trip${trips.length !== 1 ? "s" : ""} total`} />
+      <div style={{ maxWidth: 900, margin: "0 auto", padding: "32px 24px" }} className="fade-in">
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 28, flexWrap: "wrap", gap: 12 }}>
+          <div style={{ display: "flex", gap: 16, fontSize: 13 }}>
+            <span style={{ color: "rgba(255,255,255,0.3)" }}><span style={{ color: "rgba(255,255,255,0.7)", fontWeight: 700 }}>{upcoming.length}</span> upcoming</span>
+            <span style={{ color: "rgba(255,255,255,0.3)" }}><span style={{ color: "rgba(255,255,255,0.7)", fontWeight: 700 }}>{active.length}</span> active</span>
+            <span style={{ color: "rgba(255,255,255,0.3)" }}><span style={{ color: "rgba(255,255,255,0.7)", fontWeight: 700 }}>{past.length}</span> past</span>
           </div>
-          <Link href="/dashboard/create">
-            <button className="btn-glow flex items-center gap-2 h-9 px-4 rounded-xl text-sm font-semibold text-white">
-              <PlusCircle className="w-3.5 h-3.5" /> New Trip
-            </button>
+          <Link href="/dashboard/create" style={{ textDecoration: "none" }}>
+            <button className="btn-primary"><PlusCircle size={15} /> New Trip</button>
           </Link>
         </div>
 
-        <Section title="Active Now" trips={active} dot="bg-emerald-400 animate-pulse" />
-        <Section title="Upcoming" trips={upcoming} dot="bg-blue-400" />
-        <Section title="Past Trips" trips={past} dot="bg-white/20" />
+        <Section title="Active Now" trips={active} dot="#34d399" />
+        <Section title="Upcoming" trips={upcoming} dot="#60a5fa" />
+        <Section title="Past Trips" trips={past} dot="rgba(255,255,255,0.2)" />
 
         {trips.length === 0 && (
-          <div className="text-center py-24 space-y-4">
-            <div className="w-16 h-16 rounded-2xl bg-white/[0.03] border border-white/[0.06] flex items-center justify-center mx-auto">
-              <Plane className="w-7 h-7 text-white/15 rotate-45" />
+          <div style={{ textAlign: "center", paddingTop: 80, paddingBottom: 80 }}>
+            <div style={{ width: 56, height: 56, borderRadius: 16, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
+              <Plane size={24} color="rgba(255,255,255,0.15)" style={{ transform: "rotate(45deg)" }} />
             </div>
-            <div>
-              <p className="text-white/50 font-semibold mb-1">No trips yet</p>
-              <p className="text-white/25 text-sm">Create your first trip and start exploring</p>
-            </div>
-            <Link href="/dashboard/create">
-              <button className="btn-glow inline-flex items-center gap-2 h-10 px-6 rounded-xl text-sm font-semibold text-white">
-                <PlusCircle className="w-4 h-4" /> Create First Trip
-              </button>
+            <p style={{ fontSize: 16, fontWeight: 700, color: "rgba(255,255,255,0.6)", marginBottom: 8 }}>No trips yet</p>
+            <p style={{ fontSize: 14, color: "rgba(255,255,255,0.3)", marginBottom: 24 }}>Create your first trip and start exploring</p>
+            <Link href="/dashboard/create" style={{ textDecoration: "none" }}>
+              <button className="btn-primary btn-primary-lg"><PlusCircle size={16} /> Create First Trip</button>
             </Link>
           </div>
         )}
       </div>
-    </div>
+    </>
   );
 }
