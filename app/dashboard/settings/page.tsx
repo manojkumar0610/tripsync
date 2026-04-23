@@ -58,7 +58,7 @@ export default function SettingsPage() {
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) return;
-      supabase.from("users").select("*").eq("id", user.id).maybeSingle().then(({ data }) => {
+      supabase.from("users").select("*").eq("id", user.id).single().then(({ data }) => {
         if (data) { setProfile(data); setFullName(data.full_name ?? ""); }
       });
     });
