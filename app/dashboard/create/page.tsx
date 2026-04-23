@@ -66,7 +66,7 @@ export default function CreateTripPage() {
         start_date: form.start_date, end_date: form.end_date,
         budget: parseFloat(form.budget) || 0, trip_type: form.trip_type,
         notes: form.notes.trim() || null, created_by: user.id,
-      }).select().single();
+      }).select().maybeSingle();
       if (error) throw error;
       toast.success("🎉 Trip created!");
       router.push(`/trip/${data.id}`);
