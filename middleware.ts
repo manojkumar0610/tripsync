@@ -13,11 +13,9 @@ export async function middleware(request: NextRequest) {
           return request.cookies.getAll();
         },
         setAll(cookiesToSet) {
-          // Set on request so downstream can read
           cookiesToSet.forEach(({ name, value }) =>
             request.cookies.set(name, value)
           );
-          // Rebuild response with updated cookies
           supabaseResponse = NextResponse.next({ request });
           cookiesToSet.forEach(({ name, value, options }) =>
             supabaseResponse.cookies.set(name, value, options)
@@ -27,33 +25,31 @@ export async function middleware(request: NextRequest) {
     }
   );
 
-  // IMPORTANT: Do not add any logic between createServerClient and getUser()
-  // A simple mistake here can cause session bugs
+  // MUST call getUser() here — do not skip or move
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const pathname = request.nextUrl.pathname;
+  const { pathname } = request.nextUrl;
 
-  const isAuthPage = pathname.startsWith("/auth") || pathname === "/";
+  // Allow API routes and static files through without auth check
   const isApiRoute = pathname.startsWith("/api");
-  const isPublicRoute = pathname === "/" || pathname === "/join" || isApiRoute;
+  const isAuthPage = pathname.startsWith("/auth");
+  const isPublic = pathname === "/" || pathname === "/join" || isApiRoute;
 
-  // Redirect unauthenticated users to login
-  if (!user && !isAuthPage && !isPublicRoute) {
-    const loginUrl = request.nextUrl.clone();
-    loginUrl.pathname = "/auth/login";
+  // Redirect unauthenticated users to login (except public routes)
+  if (!user && !isAuthPage && !isPublic) {
+    const loginUrl = new URL("/auth/login", request.url);
     loginUrl.searchParams.set("redirectTo", pathname);
     return NextResponse.redirect(loginUrl);
   }
 
-  // Redirect authenticated users away from auth pages
-  if (user && pathname.startsWith("/auth")) {
+  // Redirect logged-in users away from auth pages
+  if (user && isAuthPage) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
-  // CRITICAL: Always return supabaseResponse (not a new NextResponse)
-  // This preserves the session cookies set by Supabase
+  // CRITICAL: return supabaseResponse to preserve session cookies
   return supabaseResponse;
 }
 
