@@ -16,7 +16,7 @@ export default async function DashboardPage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/auth/login");
 
-  const { data: profile } = await supabase.from("users").select("*").eq("id", user.id).single();
+  const { data: profile } = await supabase.from("users").select("*").eq("id", user.id).maybeSingle();
   const { data: tripMembers } = await supabase.from("trip_members").select("trip_id,role").eq("user_id", user.id);
   const tripIds = (tripMembers ?? []).map((m: any) => m.trip_id);
 
