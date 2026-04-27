@@ -249,3 +249,24 @@ body {
 
 /* Divider */
 .divider { height: 1px; background: var(--border); }
+
+/* ── Tailwind CSS variable compatibility layer ──
+   These let existing components using bg-card, text-muted-foreground etc. still work */
+:root {
+  --muted: 240 5% 11%;
+  --muted-foreground: 240 5% 45%;
+  --card: 240 10% 6%;
+  --card-foreground: 0 0% 92%;
+  --background: 240 10% 3%;
+  --foreground: 0 0% 92%;
+  --border: 240 6% 12%;
+  --input: 240 6% 12%;
+  --ring: 217 91% 60%;
+  --accent: 240 5% 14%;
+  --accent-foreground: 0 0% 92%;
+  --primary: 217 91% 60%;
+  --primary-foreground: 0 0% 100%;
+  --destructive: 0 72% 51%;
+  --destructive-foreground: 0 0% 100%;
+  --radius: 0.75rem;
+}

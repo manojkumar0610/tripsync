@@ -1,11 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Copy, Check, Gift, Users, Trophy, ExternalLink } from "lucide-react";
+import { Copy, Check, Gift, Trophy, Users } from "lucide-react";
 import { toast } from "sonner";
 
 interface ReferralClientProps {
@@ -15,7 +11,8 @@ interface ReferralClientProps {
 
 export function ReferralClient({ profile, referralCount }: ReferralClientProps) {
   const [copied, setCopied] = useState(false);
-  const referralUrl = `${typeof window !== "undefined" ? window.location.origin : "https://tripsync.io"}/auth/login?ref=${profile?.referral_code}`;
+  const origin = typeof window !== "undefined" ? window.location.origin : "https://tripsync-flax.vercel.app";
+  const referralUrl = `${origin}/auth/login?ref=${profile?.referral_code}`;
 
   const copyLink = () => {
     navigator.clipboard.writeText(referralUrl);
@@ -25,140 +22,131 @@ export function ReferralClient({ profile, referralCount }: ReferralClientProps) 
   };
 
   const MILESTONES = [
-    { count: 1,  reward: "1 extra AI itinerary",         icon: "🎁" },
-    { count: 3,  reward: "1 month Pro free",             icon: "⭐" },
-    { count: 5,  reward: "3 months Pro free",            icon: "🚀" },
-    { count: 10, reward: "1 year Pro + exclusive badge", icon: "👑" },
+    { count: 1, reward: "1 extra AI itinerary", icon: "🎁" },
+    { count: 3, reward: "1 month Pro free", icon: "⭐" },
+    { count: 5, reward: "3 months Pro free", icon: "🚀" },
+    { count: 10, reward: "1 year Pro + badge", icon: "👑" },
   ];
 
   return (
-    <div className="page-container py-8 max-w-2xl space-y-6">
+    <div style={{ maxWidth: 620, margin: "0 auto", padding: "32px 24px", display: "flex", flexDirection: "column", gap: 16 }}>
+
       {/* Hero */}
-      <Card className="bg-gradient-to-br from-amber-500 to-orange-600 border-0 text-white overflow-hidden">
-        <CardContent className="p-6 relative">
-          <div className="absolute right-4 top-4 text-5xl opacity-20 select-none">🎁</div>
-          <div className="flex items-center gap-3 mb-3">
-            <div className="rounded-xl bg-white/20 p-2.5">
-              <Gift size={22} className="text-white" />
-            </div>
-            <div>
-              <h2 className="font-syne font-bold text-xl">Refer & Earn</h2>
-              <p className="text-white/80 text-sm">Share TripSync and unlock premium rewards</p>
-            </div>
+      <div style={{ background: "linear-gradient(135deg, rgba(245,158,11,0.1), rgba(234,88,12,0.08))", border: "1px solid rgba(245,158,11,0.2)", borderRadius: 20, padding: 24, position: "relative", overflow: "hidden" }}>
+        <div style={{ position: "absolute", right: 16, top: 12, fontSize: 48, opacity: 0.15, pointerEvents: "none" }}>🎁</div>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
+          <div style={{ width: 40, height: 40, borderRadius: 12, background: "rgba(245,158,11,0.2)", border: "1px solid rgba(245,158,11,0.3)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <Gift size={18} color="#fbbf24" />
           </div>
-          <div className="grid grid-cols-2 gap-3 mt-4">
-            <div className="rounded-xl bg-white/20 backdrop-blur p-3 text-center">
-              <p className="font-syne font-bold text-2xl">{referralCount}</p>
-              <p className="text-xs text-white/80">Friends Referred</p>
-            </div>
-            <div className="rounded-xl bg-white/20 backdrop-blur p-3 text-center">
-              <p className="font-syne font-bold text-2xl">
-                {MILESTONES.find(m => referralCount < m.count)?.count ?? "∞"}
-              </p>
-              <p className="text-xs text-white/80">Until Next Reward</p>
-            </div>
+          <div>
+            <p style={{ fontSize: 16, fontWeight: 700, color: "rgba(255,255,255,0.9)" }}>Refer & Earn</p>
+            <p style={{ fontSize: 12, color: "rgba(255,255,255,0.4)" }}>Share TripSync and unlock premium rewards</p>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+          <div style={{ background: "rgba(255,255,255,0.06)", borderRadius: 12, padding: "12px 16px", textAlign: "center" }}>
+            <p style={{ fontSize: 26, fontWeight: 800, color: "rgba(255,255,255,0.92)" }}>{referralCount}</p>
+            <p style={{ fontSize: 11, color: "rgba(255,255,255,0.4)" }}>Friends Referred</p>
+          </div>
+          <div style={{ background: "rgba(255,255,255,0.06)", borderRadius: 12, padding: "12px 16px", textAlign: "center" }}>
+            <p style={{ fontSize: 26, fontWeight: 800, color: "rgba(255,255,255,0.92)" }}>
+              {MILESTONES.find(m => referralCount < m.count)?.count ?? "∞"}
+            </p>
+            <p style={{ fontSize: 11, color: "rgba(255,255,255,0.4)" }}>Until Next Reward</p>
+          </div>
+        </div>
+      </div>
 
       {/* Referral link */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2">
-            <ExternalLink size={16} className="text-blue-600" /> Your Referral Link
-          </CardTitle>
-          <CardDescription>Share this link with friends to earn rewards</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="flex gap-2">
-            <Input
-              value={referralUrl}
-              readOnly
-              className="text-sm bg-muted/50 font-mono"
-            />
-            <Button onClick={copyLink} variant="outline" size="icon" className="shrink-0">
-              {copied
-                ? <Check size={16} className="text-emerald-600" />
-                : <Copy size={16} />}
-            </Button>
+      <div style={{ background: "#0e0e1a", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 16, padding: 20 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+          <div style={{ width: 28, height: 28, borderRadius: 8, background: "rgba(59,130,246,0.1)", border: "1px solid rgba(59,130,246,0.2)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <Copy size={13} color="#60a5fa" />
           </div>
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">Your code:</span>
-            <Badge variant="info" className="font-mono text-sm px-3 py-1 tracking-widest">
-              {profile?.referral_code}
-            </Badge>
+          <p style={{ fontSize: 14, fontWeight: 700, color: "rgba(255,255,255,0.85)" }}>Your Referral Link</p>
+        </div>
+        <div style={{ display: "flex", gap: 8 }}>
+          <input
+            value={referralUrl}
+            readOnly
+            style={{ flex: 1, height: 42, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, padding: "0 12px", color: "rgba(255,255,255,0.6)", fontSize: 12, fontFamily: "monospace", outline: "none" }}
+          />
+          <button onClick={copyLink} style={{ width: 42, height: 42, borderRadius: 10, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            {copied ? <Check size={15} color="#34d399" /> : <Copy size={15} color="rgba(255,255,255,0.4)" />}
+          </button>
+        </div>
+        {profile?.referral_code && (
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 10 }}>
+            <span style={{ fontSize: 12, color: "rgba(255,255,255,0.35)" }}>Your code:</span>
+            <span style={{ fontSize: 13, fontWeight: 700, letterSpacing: "0.1em", color: "#60a5fa", background: "rgba(59,130,246,0.1)", border: "1px solid rgba(59,130,246,0.2)", borderRadius: 8, padding: "2px 10px", fontFamily: "monospace" }}>
+              {profile.referral_code}
+            </span>
           </div>
-        </CardContent>
-      </Card>
+        )}
+      </div>
 
       {/* Milestones */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2">
-            <Trophy size={16} className="text-amber-600" /> Reward Milestones
-          </CardTitle>
-          <CardDescription>More referrals = bigger rewards</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {MILESTONES.map((m) => {
+      <div style={{ background: "#0e0e1a", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 16, padding: 20 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
+          <div style={{ width: 28, height: 28, borderRadius: 8, background: "rgba(245,158,11,0.1)", border: "1px solid rgba(245,158,11,0.2)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <Trophy size={13} color="#fbbf24" />
+          </div>
+          <p style={{ fontSize: 14, fontWeight: 700, color: "rgba(255,255,255,0.85)" }}>Reward Milestones</p>
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {MILESTONES.map(m => {
             const achieved = referralCount >= m.count;
-            const isNext = !achieved && (MILESTONES.find(x => referralCount < x.count)?.count === m.count);
+            const isNext = !achieved && MILESTONES.find(x => referralCount < x.count)?.count === m.count;
             return (
-              <div
-                key={m.count}
-                className={`flex items-center gap-4 rounded-xl p-3 border transition-all ${
-                  achieved
-                    ? "border-emerald-200 bg-emerald-50/50 dark:border-emerald-900/30 dark:bg-emerald-950/20"
-                    : isNext
-                    ? "border-amber-200 bg-amber-50/50 dark:border-amber-900/30 dark:bg-amber-950/20"
-                    : "border-border bg-muted/20"
-                }`}
-              >
-                <span className="text-2xl">{m.icon}</span>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold flex items-center gap-2">
-                    {m.count} referral{m.count > 1 ? "s" : ""}
-                    {isNext && <Badge variant="warning" className="text-[10px]">Next milestone</Badge>}
-                    {achieved && <Badge variant="success" className="text-[10px]">Achieved ✓</Badge>}
-                  </p>
-                  <p className="text-xs text-muted-foreground">{m.reward}</p>
+              <div key={m.count} style={{
+                display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", borderRadius: 12,
+                background: achieved ? "rgba(16,185,129,0.06)" : isNext ? "rgba(245,158,11,0.06)" : "rgba(255,255,255,0.02)",
+                border: `1px solid ${achieved ? "rgba(16,185,129,0.2)" : isNext ? "rgba(245,158,11,0.2)" : "rgba(255,255,255,0.06)"}`,
+              }}>
+                <span style={{ fontSize: 20 }}>{m.icon}</span>
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <p style={{ fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.75)" }}>
+                      {m.count} referral{m.count > 1 ? "s" : ""}
+                    </p>
+                    {isNext && <span style={{ fontSize: 10, fontWeight: 700, color: "#fbbf24", background: "rgba(245,158,11,0.1)", border: "1px solid rgba(245,158,11,0.2)", borderRadius: 99, padding: "1px 7px" }}>Next</span>}
+                    {achieved && <span style={{ fontSize: 10, fontWeight: 700, color: "#34d399", background: "rgba(16,185,129,0.1)", border: "1px solid rgba(16,185,129,0.2)", borderRadius: 99, padding: "1px 7px" }}>✓ Done</span>}
+                  </div>
+                  <p style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", marginTop: 2 }}>{m.reward}</p>
                 </div>
-                <div className="text-right shrink-0">
-                  <p className="text-xs text-muted-foreground">
-                    {achieved ? "✅" : `${Math.min(referralCount, m.count)}/${m.count}`}
-                  </p>
-                </div>
+                <p style={{ fontSize: 11, color: "rgba(255,255,255,0.25)", whiteSpace: "nowrap" }}>
+                  {achieved ? "✅" : `${Math.min(referralCount, m.count)}/${m.count}`}
+                </p>
               </div>
             );
           })}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* How it works */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2">
-            <Users size={16} className="text-violet-600" /> How It Works
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ol className="space-y-3">
-            {[
-              "Share your unique referral link or code with friends",
-              "They sign up and create their first trip",
-              "You both get rewarded automatically",
-              "Unlock bigger rewards as you refer more people",
-            ].map((step, i) => (
-              <li key={i} className="flex items-start gap-3 text-sm">
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-violet-100 dark:bg-violet-950/40 text-violet-600 font-bold text-xs shrink-0">
-                  {i + 1}
-                </span>
-                <span className="text-muted-foreground pt-0.5">{step}</span>
-              </li>
-            ))}
-          </ol>
-        </CardContent>
-      </Card>
+      <div style={{ background: "#0e0e1a", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 16, padding: 20 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
+          <div style={{ width: 28, height: 28, borderRadius: 8, background: "rgba(139,92,246,0.1)", border: "1px solid rgba(139,92,246,0.2)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <Users size={13} color="#a78bfa" />
+          </div>
+          <p style={{ fontSize: 14, fontWeight: 700, color: "rgba(255,255,255,0.85)" }}>How It Works</p>
+        </div>
+        <ol style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {[
+            "Share your unique referral link or code with friends",
+            "They sign up and create their first trip",
+            "You both get rewarded automatically",
+            "Unlock bigger rewards as you refer more people",
+          ].map((step, i) => (
+            <li key={i} style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+              <span style={{ width: 22, height: 22, borderRadius: "50%", background: "rgba(139,92,246,0.1)", border: "1px solid rgba(139,92,246,0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: "#a78bfa", flexShrink: 0 }}>
+                {i + 1}
+              </span>
+              <span style={{ fontSize: 13, color: "rgba(255,255,255,0.45)", lineHeight: 1.5, paddingTop: 2 }}>{step}</span>
+            </li>
+          ))}
+        </ol>
+      </div>
     </div>
   );
 }
