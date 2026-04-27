@@ -29,7 +29,7 @@ function JoinContent() {
   const lookup = async (c: string) => {
     if (c.length < 6) return;
     setLoading(true);
-    const { data } = await supabase.from("trips").select("*, trip_members(count)").eq("invite_code", c.toUpperCase().trim()).single();
+    const { data } = await supabase.from("trips").select("*, trip_members(count)").eq("invite_code", c.toUpperCase().trim()).maybeSingle();
     if (data) setTrip(data); else toast.error("Invalid invite code");
     setLoading(false);
   };
@@ -38,7 +38,7 @@ function JoinContent() {
     if (!user) { router.push(`/auth/login?redirectTo=/join?code=${code}`); return; }
     setJoining(true);
     try {
-      const { data: existing } = await supabase.from("trip_members").select("id").eq("trip_id", trip.id).eq("user_id", user.id).single();
+      const { data: existing } = await supabase.from("trip_members").select("id").eq("trip_id", trip.id).eq("user_id", user.id).maybeSingle();
       if (existing) { toast.info("Already a member!"); router.push(`/trip/${trip.id}`); return; }
       const { error } = await supabase.from("trip_members").insert({ trip_id: trip.id, user_id: user.id, role: "member" });
       if (error) throw error;
