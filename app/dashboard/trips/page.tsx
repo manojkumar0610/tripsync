@@ -2,130 +2,168 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { DashboardHeader } from "@/components/layout/dashboard-header";
-import { PlusCircle, Calendar, Users, DollarSign, Plane, ArrowRight, Map, ChevronRight } from "lucide-react";
-import { formatCurrency, formatDate, getDaysUntilTrip, getTripTypeEmoji, getTripTypeLabel } from "@/lib/utils";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  PlusCircle, Calendar, Users, DollarSign,
+  Plane, ArrowRight, Map
+} from "lucide-react";
+import {
+  formatCurrency, formatDate, getDaysUntilTrip,
+  getTripTypeEmoji, getTripTypeLabel
+} from "@/lib/utils";
 
 export default async function TripsPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/auth/login");
 
-  const { data: tripMembers } = await supabase.from("trip_members").select("trip_id,role").eq("user_id", user.id);
-  const tripIds = (tripMembers ?? []).map((m: any) => m.trip_id);
-  const roleMap = Object.fromEntries((tripMembers ?? []).map((m: any) => [m.trip_id, m.role]));
+  const { data: tripMembers } = await supabase
+    .from("trip_members").select("trip_id, role").eq("user_id", user.id);
+
+  const tripIds = (tripMembers ?? []).map((m) => m.trip_id);
+  const roleMap = Object.fromEntries((tripMembers ?? []).map((m) => [m.trip_id, m.role]));
 
   let trips: any[] = [];
   if (tripIds.length > 0) {
-    const { data } = await supabase.from("trips").select("*, trip_members(count)").in("id", tripIds).order("start_date", { ascending: true });
+    const { data } = await supabase
+      .from("trips")
+      .select("*, trip_members(count)")
+      .in("id", tripIds)
+      .order("start_date", { ascending: true });
     trips = data ?? [];
   }
 
   const now = new Date();
-  const active = trips.filter(t => new Date(t.start_date) <= now && new Date(t.end_date) >= now);
-  const upcoming = trips.filter(t => new Date(t.start_date) > now);
-  const past = trips.filter(t => new Date(t.end_date) < now);
-
-  const typeGradients: Record<string, string> = {
-    friends: "linear-gradient(135deg, rgba(59,130,246,0.3), rgba(139,92,246,0.3))",
-    family: "linear-gradient(135deg, rgba(16,185,129,0.3), rgba(20,184,166,0.3))",
-    solo: "linear-gradient(135deg, rgba(245,158,11,0.3), rgba(234,88,12,0.3))",
-    bike_trip: "linear-gradient(135deg, rgba(244,63,94,0.3), rgba(239,68,68,0.3))",
-  };
+  const upcoming = trips.filter((t) => new Date(t.start_date) >= now);
+  const past = trips.filter((t) => new Date(t.end_date) < now);
+  const active = trips.filter((t) => new Date(t.start_date) <= now && new Date(t.end_date) >= now);
 
   const TripCard = ({ trip }: { trip: any }) => {
     const daysUntil = getDaysUntilTrip(trip.start_date);
-    const isActivenow = new Date(trip.start_date) <= now && new Date(trip.end_date) >= now;
+    const isActive = new Date(trip.start_date) <= now && new Date(trip.end_date) >= now;
     const isPast = new Date(trip.end_date) < now;
-    const count = trip.trip_members?.[0]?.count ?? 1;
+    const memberCount = trip.trip_members?.[0]?.count ?? 1;
     const role = roleMap[trip.id];
 
     return (
-      <Link href={`/trip/${trip.id}`} style={{ textDecoration: "none" }}>
-        <div className="card-hover" style={{ padding: "16px 18px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-            <div style={{ width: 46, height: 46, borderRadius: 13, background: typeGradients[trip.trip_type] ?? typeGradients.friends, border: "1px solid rgba(255,255,255,0.1)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, flexShrink: 0 }}>
-              {getTripTypeEmoji(trip.trip_type)}
-            </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4, flexWrap: "wrap" }}>
-                <p style={{ fontSize: 14, fontWeight: 600, color: "rgba(255,255,255,0.88)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 180 }}>{trip.title}</p>
-                {isActivenow && (
-                  <span className="badge badge-green">
-                    <span style={{ width: 5, height: 5, borderRadius: "50%", background: "#34d399", animation: "pulse-dot 2s infinite" }} /> Active
-                  </span>
-                )}
-                {isPast && <span className="badge badge-muted">Completed</span>}
-                {role === "owner" && <span className="badge badge-blue">Owner</span>}
+      <Link href={`/trip/${trip.id}`}>
+        <Card className="trip-card-hover cursor-pointer group overflow-hidden">
+          {/* Color band based on trip type */}
+          <div className={`h-1.5 w-full ${
+            trip.trip_type === "friends" ? "bg-gradient-to-r from-blue-400 to-violet-500" :
+            trip.trip_type === "family" ? "bg-gradient-to-r from-emerald-400 to-teal-500" :
+            trip.trip_type === "solo" ? "bg-gradient-to-r from-amber-400 to-orange-500" :
+            "bg-gradient-to-r from-red-400 to-rose-500"
+          }`} />
+          <CardContent className="p-5">
+            <div className="flex items-start gap-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-muted text-xl shrink-0">
+                {getTripTypeEmoji(trip.trip_type)}
               </div>
-              <p style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", marginBottom: 6, display: "flex", alignItems: "center", gap: 4 }}>
-                <Map size={11} /> {trip.destination}
-              </p>
-              <div style={{ display: "flex", gap: 12, fontSize: 11, color: "rgba(255,255,255,0.25)", flexWrap: "wrap" }}>
-                <span style={{ display: "flex", alignItems: "center", gap: 4 }}><Calendar size={10} />{formatDate(trip.start_date)} — {formatDate(trip.end_date)}</span>
-                <span style={{ display: "flex", alignItems: "center", gap: 4 }}><Users size={10} />{count}</span>
-                {trip.budget > 0 && <span style={{ display: "flex", alignItems: "center", gap: 4 }}><DollarSign size={10} />{formatCurrency(trip.budget)}</span>}
-              </div>
-            </div>
-            <div style={{ textAlign: "right", flexShrink: 0 }}>
-              {!isPast && !isActivenow && daysUntil >= 0 && (
-                <p style={{ fontSize: 13, fontWeight: 700, color: daysUntil <= 7 ? "#fbbf24" : "#60a5fa" }}>
-                  {daysUntil === 0 ? "Today!" : `${daysUntil}d`}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h3 className="font-syne font-semibold">{trip.title}</h3>
+                  {isActive && <Badge variant="success" className="text-[10px]">Active</Badge>}
+                  {isPast && <Badge variant="secondary" className="text-[10px]">Completed</Badge>}
+                  {role === "owner" && <Badge variant="info" className="text-[10px]">Owner</Badge>}
+                </div>
+                <p className="text-sm text-muted-foreground mt-0.5 flex items-center gap-1">
+                  <Map size={12} /> {trip.destination}
                 </p>
-              )}
-              <ChevronRight size={14} color="rgba(255,255,255,0.2)" style={{ marginTop: 4 }} />
+                <div className="flex flex-wrap items-center gap-3 mt-2 text-xs text-muted-foreground">
+                  <span className="flex items-center gap-1">
+                    <Calendar size={11} />
+                    {formatDate(trip.start_date)} — {formatDate(trip.end_date)}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <Users size={11} /> {memberCount} member{memberCount !== 1 ? "s" : ""}
+                  </span>
+                  {trip.budget > 0 && (
+                    <span className="flex items-center gap-1">
+                      <DollarSign size={11} /> {formatCurrency(trip.budget)} budget
+                    </span>
+                  )}
+                  <span className="capitalize">{getTripTypeLabel(trip.trip_type)}</span>
+                </div>
+              </div>
+              <div className="text-right shrink-0">
+                {!isPast && (
+                  <p className={`text-xs font-semibold ${daysUntil <= 7 ? "text-amber-600" : "text-blue-600"}`}>
+                    {isActive ? "Today!" : daysUntil === 0 ? "Tomorrow" : `${daysUntil}d`}
+                  </p>
+                )}
+                <ArrowRight size={16} className="text-muted-foreground mt-1 opacity-0 group-hover:opacity-100 transition-opacity" />
+              </div>
             </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       </Link>
     );
   };
 
-  const Section = ({ title, trips, dot }: { title: string; trips: any[]; dot: string }) =>
-    trips.length > 0 ? (
-      <div style={{ marginBottom: 28 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-          <span style={{ width: 7, height: 7, borderRadius: "50%", background: dot, flexShrink: 0 }} />
-          <span className="section-label">{title}</span>
-          <span style={{ fontSize: 12, color: "rgba(255,255,255,0.2)", fontWeight: 600 }}>({trips.length})</span>
-        </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {trips.map(t => <TripCard key={t.id} trip={t} />)}
-        </div>
-      </div>
-    ) : null;
-
   return (
-    <>
-      <DashboardHeader title="My Trips" subtitle={`${trips.length} trip${trips.length !== 1 ? "s" : ""} total`} />
-      <div style={{ maxWidth: 900, margin: "0 auto", padding: "32px 24px" }} className="fade-in">
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 28, flexWrap: "wrap", gap: 12 }}>
-          <div style={{ display: "flex", gap: 16, fontSize: 13 }}>
-            <span style={{ color: "rgba(255,255,255,0.3)" }}><span style={{ color: "rgba(255,255,255,0.7)", fontWeight: 700 }}>{upcoming.length}</span> upcoming</span>
-            <span style={{ color: "rgba(255,255,255,0.3)" }}><span style={{ color: "rgba(255,255,255,0.7)", fontWeight: 700 }}>{active.length}</span> active</span>
-            <span style={{ color: "rgba(255,255,255,0.3)" }}><span style={{ color: "rgba(255,255,255,0.7)", fontWeight: 700 }}>{past.length}</span> past</span>
+    <div className="page-enter">
+      <DashboardHeader title="My Trips" subtitle={`${trips.length} trips total`} />
+      <div className="page-container py-6 space-y-8">
+        <div className="flex justify-between items-center">
+          <div className="flex gap-4 text-sm text-muted-foreground">
+            <span className="font-medium text-foreground">{upcoming.length} upcoming</span>
+            <span>{active.length} active</span>
+            <span>{past.length} past</span>
           </div>
-          <Link href="/dashboard/create" style={{ textDecoration: "none" }}>
-            <button className="btn-primary"><PlusCircle size={15} /> New Trip</button>
+          <Link href="/dashboard/create">
+            <Button variant="gradient" size="sm" className="gap-2">
+              <PlusCircle size={16} /> New Trip
+            </Button>
           </Link>
         </div>
 
-        <Section title="Active Now" trips={active} dot="#34d399" />
-        <Section title="Upcoming" trips={upcoming} dot="#60a5fa" />
-        <Section title="Past Trips" trips={past} dot="rgba(255,255,255,0.2)" />
+        {/* Active trips */}
+        {active.length > 0 && (
+          <section className="space-y-3">
+            <h2 className="font-syne text-lg font-semibold flex items-center gap-2">
+              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+              Active Now
+            </h2>
+            {active.map((t) => <TripCard key={t.id} trip={t} />)}
+          </section>
+        )}
+
+        {/* Upcoming */}
+        {upcoming.length > 0 && (
+          <section className="space-y-3">
+            <h2 className="font-syne text-lg font-semibold">Upcoming Trips</h2>
+            {upcoming.map((t) => <TripCard key={t.id} trip={t} />)}
+          </section>
+        )}
+
+        {/* Past */}
+        {past.length > 0 && (
+          <section className="space-y-3">
+            <h2 className="font-syne text-lg font-semibold text-muted-foreground">Past Trips</h2>
+            {past.map((t) => <TripCard key={t.id} trip={t} />)}
+          </section>
+        )}
 
         {trips.length === 0 && (
-          <div style={{ textAlign: "center", paddingTop: 80, paddingBottom: 80 }}>
-            <div style={{ width: 56, height: 56, borderRadius: 16, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
-              <Plane size={24} color="rgba(255,255,255,0.15)" style={{ transform: "rotate(45deg)" }} />
+          <div className="flex flex-col items-center justify-center py-24 gap-4">
+            <div className="rounded-full bg-muted p-6">
+              <Plane size={36} className="text-muted-foreground" />
             </div>
-            <p style={{ fontSize: 16, fontWeight: 700, color: "rgba(255,255,255,0.6)", marginBottom: 8 }}>No trips yet</p>
-            <p style={{ fontSize: 14, color: "rgba(255,255,255,0.3)", marginBottom: 24 }}>Create your first trip and start exploring</p>
-            <Link href="/dashboard/create" style={{ textDecoration: "none" }}>
-              <button className="btn-primary btn-primary-lg"><PlusCircle size={16} /> Create First Trip</button>
+            <h3 className="font-syne text-xl font-semibold">No trips yet</h3>
+            <p className="text-muted-foreground text-center max-w-sm">
+              Create your first trip and start exploring the world with friends or family.
+            </p>
+            <Link href="/dashboard/create">
+              <Button variant="gradient" size="lg" className="gap-2">
+                <PlusCircle size={18} /> Create Your First Trip
+              </Button>
             </Link>
           </div>
         )}
       </div>
-    </>
+    </div>
   );
 }
