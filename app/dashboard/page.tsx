@@ -2,193 +2,285 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { DashboardHeader } from "@/components/layout/dashboard-header";
-import { PlusCircle, Map, DollarSign, Calendar, ArrowRight, Sparkles, Plane, TrendingUp, Users, ChevronRight } from "lucide-react";
-import { formatCurrency, formatDate, getDaysUntilTrip, getTripTypeEmoji, getInitials } from "@/lib/utils";
-
-const S = {
-  page: { animation: "fadeIn 0.35s ease" } as React.CSSProperties,
-  wrap: { maxWidth: 1280, margin: "0 auto", padding: "32px 24px" } as React.CSSProperties,
-  card: { background: "#0e0e1a", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 16 } as React.CSSProperties,
-};
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Progress } from "@/components/ui/progress";
+import {
+  PlusCircle, Map, DollarSign, Users, TrendingUp,
+  Calendar, ArrowRight, Sparkles, Clock, Plane
+} from "lucide-react";
+import {
+  formatCurrency, formatDate, getDaysUntilTrip,
+  getTripTypeEmoji, getInitials, truncate
+} from "@/lib/utils";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/auth/login");
 
-  const { data: profile } = await supabase.from("users").select("*").eq("id", user.id).maybeSingle();
-  const { data: tripMembers } = await supabase.from("trip_members").select("trip_id,role").eq("user_id", user.id);
-  const tripIds = (tripMembers ?? []).map((m: any) => m.trip_id);
+  // Fetch user profile
+  const { data: profile } = await supabase
+    .from("users").select("*").eq("id", user.id).single();
+
+  // Fetch trips where user is member
+  const { data: tripMembers } = await supabase
+    .from("trip_members")
+    .select("trip_id, role")
+    .eq("user_id", user.id);
+
+  const tripIds = (tripMembers ?? []).map((m) => m.trip_id);
 
   let trips: any[] = [];
   if (tripIds.length > 0) {
-    const { data } = await supabase.from("trips").select("*, trip_members(count)").in("id", tripIds).order("start_date", { ascending: true });
+    const { data } = await supabase
+      .from("trips")
+      .select("*, trip_members(count)")
+      .in("id", tripIds)
+      .order("start_date", { ascending: true });
     trips = data ?? [];
   }
 
   const now = new Date();
-  const upcoming = trips.filter(t => new Date(t.start_date) > now);
-  const active = trips.filter(t => new Date(t.start_date) <= now && new Date(t.end_date) >= now);
-  const past = trips.filter(t => new Date(t.end_date) < now);
+  const upcomingTrips = trips.filter((t) => new Date(t.start_date) >= now).slice(0, 3);
+  const pastTrips = trips.filter((t) => new Date(t.end_date) < now).length;
 
-  let totalSpent = 0, pendingBalance = 0;
+  // Fetch expenses
+  let totalSpent = 0;
+  let pendingBalance = 0;
   if (tripIds.length > 0) {
-    const { data: paid } = await supabase.from("expenses").select("amount").eq("paid_by", user.id);
-    totalSpent = (paid ?? []).reduce((s: number, e: any) => s + Number(e.amount), 0);
-    const { data: splits } = await supabase.from("expense_splits").select("amount,expense_id,expenses(paid_by)").eq("user_id", user.id).eq("is_settled", false);
-    pendingBalance = (splits ?? []).filter((s: any) => s.expenses?.paid_by !== user.id).reduce((s: number, x: any) => s + Number(x.amount), 0);
+    const { data: expenseSplits } = await supabase
+      .from("expense_splits")
+      .select("amount, is_settled, expense_id, expenses(paid_by)")
+      .eq("user_id", user.id)
+      .eq("is_settled", false);
+
+    pendingBalance = (expenseSplits ?? [])
+      .filter((s: any) => s.expenses?.paid_by !== user.id)
+      .reduce((sum: number, s: any) => sum + Number(s.amount), 0);
+
+    const { data: paidExpenses } = await supabase
+      .from("expenses").select("amount").eq("paid_by", user.id);
+    totalSpent = (paidExpenses ?? []).reduce((sum: number, e: any) => sum + Number(e.amount), 0);
   }
 
-  const hour = new Date().getHours();
-  const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
-  const firstName = profile?.full_name?.split(" ")[0] ?? "Traveler";
-  const displayTrips = [...active, ...upcoming].slice(0, 5);
+  const greeting = () => {
+    const h = new Date().getHours();
+    if (h < 12) return "Good morning";
+    if (h < 17) return "Good afternoon";
+    return "Good evening";
+  };
 
-  const stats = [
-    { label: "Total Trips", value: trips.length, icon: Map, color: "#60a5fa", bg: "rgba(59,130,246,0.08)", border: "rgba(59,130,246,0.15)" },
-    { label: "Upcoming", value: upcoming.length, icon: Calendar, color: "#a78bfa", bg: "rgba(139,92,246,0.08)", border: "rgba(139,92,246,0.15)" },
-    { label: "Total Spent", value: formatCurrency(totalSpent), icon: TrendingUp, color: "#34d399", bg: "rgba(16,185,129,0.08)", border: "rgba(16,185,129,0.15)" },
-    { label: "You Owe", value: formatCurrency(pendingBalance), icon: DollarSign, color: pendingBalance > 0 ? "#fb7185" : "#34d399", bg: pendingBalance > 0 ? "rgba(244,63,94,0.08)" : "rgba(16,185,129,0.08)", border: pendingBalance > 0 ? "rgba(244,63,94,0.15)" : "rgba(16,185,129,0.15)" },
-  ];
+  const firstName = profile?.full_name?.split(" ")[0] ?? "Traveler";
 
   return (
-    <>
+    <div className="page-enter">
       <DashboardHeader title="Dashboard" subtitle="Your travel command center" />
-      <div style={S.wrap} className="fade-in">
 
+      <div className="page-container py-6 space-y-8">
         {/* Welcome */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 28, flexWrap: "wrap", gap: 12 }}>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <p style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", marginBottom: 2 }}>{greeting} 👋</p>
-            <h2 style={{ fontSize: 26, fontWeight: 800, color: "rgba(255,255,255,0.92)", letterSpacing: "-0.03em" }}>{firstName}</h2>
+            <h2 className="font-syne text-2xl font-bold">
+              {greeting()}, {firstName} 👋
+            </h2>
+            <p className="text-muted-foreground mt-1">
+              {upcomingTrips.length > 0
+                ? `You have ${upcomingTrips.length} upcoming trip${upcomingTrips.length > 1 ? "s" : ""}`
+                : "Ready to plan your next adventure?"}
+            </p>
           </div>
-          <Link href="/dashboard/create" style={{ textDecoration: "none" }}>
-            <button className="btn-primary" style={{ gap: 8 }}>
-              <PlusCircle size={16} /> New Trip
-            </button>
+          <Link href="/dashboard/create">
+            <Button variant="gradient" size="lg" className="gap-2">
+              <PlusCircle size={18} />
+              Plan New Trip
+            </Button>
           </Link>
         </div>
 
         {/* Stats */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 12, marginBottom: 32 }}>
-          {stats.map((s) => (
-            <div key={s.label} className="stat-card fade-up" style={{ background: s.bg, border: `1px solid ${s.border}` }}>
-              <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 12 }}>
-                <div style={{ width: 36, height: 36, borderRadius: 10, background: s.bg, border: `1px solid ${s.border}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <s.icon size={16} color={s.color} />
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {[
+            {
+              label: "Total Trips",
+              value: trips.length,
+              icon: Map,
+              color: "text-blue-600",
+              bg: "bg-blue-50 dark:bg-blue-950/30",
+              suffix: "",
+            },
+            {
+              label: "Upcoming",
+              value: upcomingTrips.length,
+              icon: Calendar,
+              color: "text-violet-600",
+              bg: "bg-violet-50 dark:bg-violet-950/30",
+              suffix: "",
+            },
+            {
+              label: "Total Spent",
+              value: formatCurrency(totalSpent),
+              icon: DollarSign,
+              color: "text-emerald-600",
+              bg: "bg-emerald-50 dark:bg-emerald-950/30",
+              suffix: "",
+              isFormatted: true,
+            },
+            {
+              label: "You Owe",
+              value: formatCurrency(pendingBalance),
+              icon: TrendingUp,
+              color: pendingBalance > 0 ? "text-red-500" : "text-emerald-600",
+              bg: pendingBalance > 0 ? "bg-red-50 dark:bg-red-950/30" : "bg-emerald-50 dark:bg-emerald-950/30",
+              suffix: "",
+              isFormatted: true,
+            },
+          ].map((stat) => (
+            <div key={stat.label} className="stat-card">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">{stat.label}</p>
+                  <p className={`font-syne text-2xl font-bold mt-1 ${stat.color}`}>
+                    {stat.value}
+                  </p>
+                </div>
+                <div className={`rounded-xl p-2.5 ${stat.bg}`}>
+                  <stat.icon size={18} className={stat.color} />
                 </div>
               </div>
-              <p style={{ fontSize: 24, fontWeight: 800, color: s.color, letterSpacing: "-0.03em", marginBottom: 2 }}>
-                {typeof s.value === "number" ? s.value : s.value}
-              </p>
-              <p style={{ fontSize: 12, color: "rgba(255,255,255,0.35)" }}>{s.label}</p>
             </div>
           ))}
         </div>
 
-        {/* Main content */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 24 }}>
-          {/* Trips section */}
-          <div>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-              <h3 style={{ fontSize: 15, fontWeight: 700, color: "rgba(255,255,255,0.85)" }}>
-                {active.length > 0 ? "Active & Upcoming" : "Upcoming Trips"}
-              </h3>
-              <Link href="/dashboard/trips" style={{ textDecoration: "none" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 13, color: "rgba(255,255,255,0.35)", cursor: "pointer" }}>
-                  View all <ChevronRight size={14} />
-                </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Upcoming Trips */}
+          <div className="lg:col-span-2 space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="font-syne text-lg font-semibold">Upcoming Trips</h3>
+              <Link href="/dashboard/trips">
+                <Button variant="ghost" size="sm" className="gap-1 text-muted-foreground">
+                  View all <ArrowRight size={14} />
+                </Button>
               </Link>
             </div>
 
-            {displayTrips.length === 0 ? (
-              <div className="card" style={{ padding: 40, textAlign: "center" }}>
-                <div style={{ width: 52, height: 52, borderRadius: 16, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" }}>
-                  <Plane size={22} color="rgba(255,255,255,0.2)" style={{ transform: "rotate(45deg)" }} />
-                </div>
-                <p style={{ fontSize: 15, fontWeight: 600, color: "rgba(255,255,255,0.6)", marginBottom: 6 }}>No trips yet</p>
-                <p style={{ fontSize: 13, color: "rgba(255,255,255,0.3)", marginBottom: 20 }}>Start planning your next adventure</p>
-                <Link href="/dashboard/create" style={{ textDecoration: "none" }}>
-                  <button className="btn-primary" style={{ fontSize: 13, height: 36 }}>
-                    <PlusCircle size={14} /> Create Trip
-                  </button>
-                </Link>
-              </div>
+            {upcomingTrips.length === 0 ? (
+              <Card className="border-dashed">
+                <CardContent className="flex flex-col items-center justify-center py-12 gap-3">
+                  <div className="rounded-full bg-muted p-4">
+                    <Plane size={28} className="text-muted-foreground" />
+                  </div>
+                  <p className="font-semibold">No upcoming trips</p>
+                  <p className="text-sm text-muted-foreground text-center">
+                    Start planning your next adventure
+                  </p>
+                  <Link href="/dashboard/create">
+                    <Button variant="gradient" size="sm">Create Trip</Button>
+                  </Link>
+                </CardContent>
+              </Card>
             ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                {displayTrips.map((trip) => {
-                  const daysUntil = getDaysUntilTrip(trip.start_date);
-                  const isActivenow = new Date(trip.start_date) <= now && new Date(trip.end_date) >= now;
-                  const count = trip.trip_members?.[0]?.count ?? 1;
-                  return (
-                    <Link key={trip.id} href={`/trip/${trip.id}`} style={{ textDecoration: "none" }}>
-                      <div className="card-hover" style={{ padding: 16 }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-                          <div style={{ width: 44, height: 44, borderRadius: 12, background: "linear-gradient(135deg, rgba(59,130,246,0.2), rgba(139,92,246,0.2))", border: "1px solid rgba(255,255,255,0.07)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, flexShrink: 0 }}>
+              upcomingTrips.map((trip) => {
+                const daysUntil = getDaysUntilTrip(trip.start_date);
+                const memberCount = trip.trip_members?.[0]?.count ?? 1;
+                return (
+                  <Link key={trip.id} href={`/trip/${trip.id}`}>
+                    <Card className="trip-card-hover cursor-pointer overflow-hidden">
+                      <CardContent className="p-0">
+                        <div className="flex items-center gap-4 p-4">
+                          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-400 to-violet-500 text-2xl shadow-md shrink-0">
                             {getTripTypeEmoji(trip.trip_type)}
                           </div>
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 3 }}>
-                              <p style={{ fontSize: 14, fontWeight: 600, color: "rgba(255,255,255,0.88)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{trip.title}</p>
-                              {isActivenow && (
-                                <span className="badge badge-green" style={{ flexShrink: 0 }}>
-                                  <span style={{ width: 5, height: 5, borderRadius: "50%", background: "#34d399", animation: "pulse-dot 2s infinite" }} />
-                                  Active
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-start justify-between gap-2">
+                              <p className="font-syne font-semibold truncate">{trip.title}</p>
+                              <Badge variant={daysUntil <= 7 ? "warning" : "info"} className="shrink-0 text-[10px]">
+                                {daysUntil === 0 ? "Today!" : daysUntil < 0 ? "Active" : `${daysUntil}d away`}
+                              </Badge>
+                            </div>
+                            <p className="text-sm text-muted-foreground mt-0.5">{trip.destination}</p>
+                            <div className="flex items-center gap-3 mt-1.5 text-xs text-muted-foreground">
+                              <span className="flex items-center gap-1">
+                                <Calendar size={11} />
+                                {formatDate(trip.start_date)}
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <Users size={11} />
+                                {memberCount} member{memberCount !== 1 ? "s" : ""}
+                              </span>
+                              {trip.budget > 0 && (
+                                <span className="flex items-center gap-1">
+                                  <DollarSign size={11} />
+                                  {formatCurrency(trip.budget)}
                                 </span>
                               )}
                             </div>
-                            <p style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", marginBottom: 6 }}>{trip.destination}</p>
-                            <div style={{ display: "flex", gap: 14, fontSize: 11, color: "rgba(255,255,255,0.25)" }}>
-                              <span style={{ display: "flex", alignItems: "center", gap: 4 }}><Calendar size={10} />{formatDate(trip.start_date)}</span>
-                              <span style={{ display: "flex", alignItems: "center", gap: 4 }}><Users size={10} />{count}</span>
-                            </div>
                           </div>
-                          <div style={{ textAlign: "right", flexShrink: 0 }}>
-                            {!isActivenow && daysUntil >= 0 && (
-                              <p style={{ fontSize: 13, fontWeight: 700, color: daysUntil <= 7 ? "#fbbf24" : "#60a5fa" }}>
-                                {daysUntil === 0 ? "Today!" : `${daysUntil}d`}
-                              </p>
-                            )}
-                          </div>
+                          <ArrowRight size={16} className="text-muted-foreground shrink-0" />
                         </div>
-                      </div>
-                    </Link>
-                  );
-                })}
-              </div>
+                      </CardContent>
+                    </Card>
+                  </Link>
+                );
+              })
             )}
           </div>
 
-          {/* Quick Actions */}
-          <div>
-            <h3 style={{ fontSize: 15, fontWeight: 700, color: "rgba(255,255,255,0.85)", marginBottom: 16 }}>Quick Actions</h3>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+          {/* Quick Actions + Activity */}
+          <div className="space-y-4">
+            <h3 className="font-syne text-lg font-semibold">Quick Actions</h3>
+            <div className="space-y-2">
               {[
-                { icon: PlusCircle, label: "New Trip", href: "/dashboard/create", color: "#60a5fa" },
-                { icon: Sparkles, label: "AI Itinerary", href: "/dashboard/trips", color: "#a78bfa" },
-                { icon: Map, label: "All Trips", href: "/dashboard/trips", color: "#34d399" },
-                { icon: DollarSign, label: "Expenses", href: "/dashboard/trips", color: "#fbbf24" },
-              ].map((a) => (
-                <Link key={a.label} href={a.href} style={{ textDecoration: "none" }}>
-                  <div style={{
-                    padding: "14px 16px", borderRadius: 12,
-                    background: "rgba(255,255,255,0.02)",
-                    border: "1px solid rgba(255,255,255,0.07)",
-                    display: "flex", flexDirection: "column", gap: 8,
-                    cursor: "pointer", transition: "all 0.15s",
-                  }}
-                    onMouseEnter={e => { const el = e.currentTarget; el.style.background = "rgba(255,255,255,0.05)"; el.style.borderColor = "rgba(255,255,255,0.12)"; }}
-                    onMouseLeave={e => { const el = e.currentTarget; el.style.background = "rgba(255,255,255,0.02)"; el.style.borderColor = "rgba(255,255,255,0.07)"; }}
-                  >
-                    <a.icon size={18} color={a.color} />
-                    <span style={{ fontSize: 13, fontWeight: 500, color: "rgba(255,255,255,0.6)" }}>{a.label}</span>
+                { icon: PlusCircle, label: "Create Trip", href: "/dashboard/create", color: "text-blue-600", bg: "bg-blue-50 dark:bg-blue-950/30" },
+                { icon: Sparkles, label: "Generate Itinerary", href: "/dashboard/trips", color: "text-violet-600", bg: "bg-violet-50 dark:bg-violet-950/30" },
+                { icon: DollarSign, label: "Add Expense", href: "/dashboard/trips", color: "text-emerald-600", bg: "bg-emerald-50 dark:bg-emerald-950/30" },
+                { icon: Users, label: "Invite Friends", href: "/dashboard/trips", color: "text-amber-600", bg: "bg-amber-50 dark:bg-amber-950/30" },
+              ].map((action) => (
+                <Link key={action.label} href={action.href}>
+                  <div className="flex items-center gap-3 rounded-xl border p-3 hover:bg-accent transition-colors cursor-pointer group">
+                    <div className={`rounded-lg p-2 ${action.bg}`}>
+                      <action.icon size={16} className={action.color} />
+                    </div>
+                    <span className="text-sm font-medium">{action.label}</span>
+                    <ArrowRight size={14} className="ml-auto text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                   </div>
                 </Link>
               ))}
             </div>
+
+            {/* Stats card */}
+            <Card className="bg-gradient-to-br from-blue-600 to-violet-700 text-white border-0 shadow-lg">
+              <CardContent className="p-5">
+                <div className="flex items-center gap-2 mb-3">
+                  <Sparkles size={16} />
+                  <span className="text-sm font-semibold">Travel Stats</span>
+                </div>
+                <div className="space-y-3">
+                  <div>
+                    <div className="flex justify-between text-xs mb-1 opacity-90">
+                      <span>Trips Completed</span>
+                      <span>{pastTrips}/{trips.length}</span>
+                    </div>
+                    <div className="h-1.5 rounded-full bg-white/20">
+                      <div
+                        className="h-full rounded-full bg-white"
+                        style={{ width: trips.length ? `${(pastTrips / trips.length) * 100}%` : "0%" }}
+                      />
+                    </div>
+                  </div>
+                  <p className="text-xs opacity-80">
+                    {trips.length === 0
+                      ? "Create your first trip to get started!"
+                      : `${pastTrips} completed, ${upcomingTrips.length} upcoming`}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </div>
-    </>
+    </div>
   );
 }

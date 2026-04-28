@@ -1,43 +1,43 @@
 "use client";
-import { useState } from "react";
-import { Search } from "lucide-react";
 
-export function DashboardHeader({ title, subtitle }: { title: string; subtitle?: string }) {
+import { useTheme } from "next-themes";
+import { Sun, Moon, Search, Bell } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+
+interface HeaderProps {
+  title: string;
+  subtitle?: string;
+}
+
+export function DashboardHeader({ title, subtitle }: HeaderProps) {
+  const { theme, setTheme } = useTheme();
+
   return (
-    <header style={{
-      position: "sticky", top: 0, zIndex: 40, height: 64,
-      display: "flex", alignItems: "center", justifyContent: "space-between",
-      padding: "0 24px",
-      background: "rgba(8,8,16,0.85)",
-      backdropFilter: "blur(20px)",
-      borderBottom: "1px solid rgba(255,255,255,0.06)",
-    }}>
+    <header className="sticky top-0 z-40 flex h-16 items-center justify-between border-b bg-background/80 backdrop-blur-sm px-6">
       <div>
-        <h1 style={{ fontSize: 18, fontWeight: 700, color: "rgba(255,255,255,0.92)", letterSpacing: "-0.02em", lineHeight: 1.2 }}>
-          {title}
-        </h1>
-        {subtitle && (
-          <p style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", marginTop: 1 }}>{subtitle}</p>
-        )}
+        <h1 className="font-syne text-xl font-bold">{title}</h1>
+        {subtitle && <p className="text-xs text-muted-foreground">{subtitle}</p>}
       </div>
 
-      <div style={{
-        display: "flex", alignItems: "center", gap: 8,
-        background: "rgba(255,255,255,0.04)",
-        border: "1px solid rgba(255,255,255,0.07)",
-        borderRadius: 10, padding: "0 12px", height: 36,
-      }}>
-        <Search size={13} color="rgba(255,255,255,0.25)" />
-        <input
-          type="text"
-          placeholder="Search..."
-          style={{
-            background: "transparent", border: "none", outline: "none",
-            fontSize: 13, color: "rgba(255,255,255,0.7)",
-            fontFamily: "inherit", width: 140,
-          }}
-        />
-        <kbd style={{ fontSize: 10, color: "rgba(255,255,255,0.2)", background: "rgba(255,255,255,0.06)", padding: "1px 5px", borderRadius: 4, fontFamily: "monospace" }}>⌘K</kbd>
+      <div className="flex items-center gap-2">
+        <div className="relative hidden md:block">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Search trips..."
+            className="h-8 w-52 pl-8 text-xs bg-muted/50 border-0 focus-visible:ring-1"
+          />
+        </div>
+
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-9 w-9"
+          onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+        >
+          <Sun size={16} className="rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+          <Moon size={16} className="absolute rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+        </Button>
       </div>
     </header>
   );
