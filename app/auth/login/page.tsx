@@ -6,7 +6,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
@@ -264,7 +263,7 @@ function LoginForm() {
 
             <div className="mt-6 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Checkbox id="remember-me" aria-label="Remember me" />
+                <input id="remember-me" name="remember-me" type="checkbox" aria-label="Remember me" className="h-4 w-4 rounded border border-white/30 bg-transparent text-violet-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#040714]" />
                 <Label htmlFor="remember-me" className="text-slate-300">Remember me</Label>
               </div>
               <Link href="#" className="text-violet-300 hover:text-violet-200">Forgot password?</Link>
