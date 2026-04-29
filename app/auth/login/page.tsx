@@ -20,7 +20,7 @@ const features = [
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirectTo = searchParams.get("redirectTo") ?? "/dashboard";
+  const redirectTo = searchParams.get("redirectTo") ?? "/";
   const supabase = createClient();
 
   const [email, setEmail] = useState("");
@@ -35,7 +35,7 @@ function LoginForm() {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "SIGNED_IN" && session) {
-        router.push("/dashboard");
+        router.push("/");
         router.refresh();
       }
     });
@@ -81,7 +81,7 @@ function LoginForm() {
       return;
     }
     toast.success("Welcome to TripSync! 🎉");
-    router.push("/dashboard");
+    router.push("/");
     router.refresh();
     setLoading(false);
   };
