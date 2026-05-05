@@ -31,7 +31,7 @@ export default async function DashboardPage() {
   if (!user) redirect("/auth/login");
 
   const { data: profile } = await supabase
-    .from("users").select("*").eq("id", user.id).single();
+    .from("users").select("*").eq("id", user.id).maybeSingle();
 
   const { data: tripMembers } = await supabase
     .from("trip_members").select("trip_id, role").eq("user_id", user.id);

@@ -36,7 +36,7 @@ function JoinTripContent() {
       .from("trips")
       .select("*, trip_members(count)")
       .eq("invite_code", inviteCode.toUpperCase().trim())
-      .single();
+      .maybeSingle();
 
     if (error || !data) {
       toast.error("Invalid invite code. Please check and try again.");
@@ -61,7 +61,7 @@ function JoinTripContent() {
         .select("id")
         .eq("trip_id", trip.id)
         .eq("user_id", user.id)
-        .single();
+        .maybeSingle();
 
       if (existing) {
         toast.info("You're already a member of this trip!");

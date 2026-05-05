@@ -9,7 +9,7 @@ export default async function ReferralPage() {
   if (!user) redirect("/auth/login");
 
   const { data: profile } = await supabase
-    .from("users").select("*").eq("id", user.id).single();
+    .from("users").select("*").eq("id", user.id).maybeSingle();
 
   // Count referrals
   const { count: referralCount } = await supabase
