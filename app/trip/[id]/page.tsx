@@ -17,7 +17,7 @@ export default async function TripDetailPage({ params }: PageProps) {
     .from("trips")
     .select("*")
     .eq("id", id)
-    .single();
+    .maybeSingle();
 
   if (!trip) notFound();
 
@@ -27,7 +27,7 @@ export default async function TripDetailPage({ params }: PageProps) {
     .select("role")
     .eq("trip_id", id)
     .eq("user_id", user.id)
-    .single();
+    .maybeSingle();
 
   if (!membership) {
     // Try to let them join via URL
@@ -66,7 +66,7 @@ export default async function TripDetailPage({ params }: PageProps) {
     .from("users")
     .select("*")
     .eq("id", user.id)
-    .single();
+    .maybeSingle();
 
   return (
     <TripDetailClient

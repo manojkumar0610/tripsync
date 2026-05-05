@@ -32,7 +32,7 @@ export default function SettingsPage() {
     const load = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-      const { data } = await supabase.from("users").select("*").eq("id", user.id).single();
+      const { data } = await supabase.from("users").select("*").eq("id", user.id).maybeSingle();
       if (data) {
         setProfile(data);
         setForm({ full_name: data.full_name ?? "", email: data.email ?? "" });
